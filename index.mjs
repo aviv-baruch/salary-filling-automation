@@ -1,21 +1,26 @@
 import puppeteer from 'puppeteer';
-
+import token from './token.json' assert {type: 'json'};
+import configuration from './configuration.json' assert {type: 'json'};
 
 
 (async () => {
     const browser = await puppeteer.launch({ headless: false });
     const page = await browser.newPage();
     const homepage = "https://my360265.sapbydesign.com/sap/public/ap/ui/repository/SAP_UI/HTMLOBERON5/client.html"
-
     //user data
-    const username = "aviv-b"
-    const password = "2468Aviv"
 
+    const username = configuration.users.username
+    const password = configuration.users.password
+    console.log(username, password)
     //data to be filled
-    const task = "להט"
-    const taskDescription = "טיוטה ראשונה"
-    const hours = { total: 9, startTime: 9, endTime: 18 }
-    const dayDescription = "כתיבה"
+    const task = configuration.data.task
+    const taskDescription = configuration.data.taskDescription
+    const hours = {
+        total: configuration.data.hours.total,
+        startTime: configuration.data.hours.startTime,
+        endTime: configuration.data.hours.endTime
+    }
+    const dayDescription = configuration.data.dayDescription
     let text = `${task} ${taskDescription}`
 
 
@@ -44,6 +49,7 @@ async function login(username, password, page) {
         const continueButton = '#__control1-continueBtn-inner';
         const deleteSessions = "#__box0-CbBg"
         await page.click(deleteSessions);
+        await page.waitForNetworkIdle({ idleTime: 500 });
         await page.click(continueButton);
     }
 }
@@ -52,17 +58,21 @@ async function goToHoursFillingPage(page) {
     const homeButton = '.sapBUiShMnuItemIcon';
     const selfServicesDashboard = '#__item39';
     const editTimeShit = '#__link26';
+    try
+    {
+        await page.waitForSelector(homeButton);
+        await page.click(homeButton);
 
-    await page.waitForSelector(homeButton);
-    await page.click(homeButton);
+        await page.waitForSelector(selfServicesDashboard);
+        await page.click(selfServicesDashboard);
 
-    await page.waitForSelector(selfServicesDashboard);
-    await page.click(selfServicesDashboard);
+        await page.waitForSelector(editTimeShit);
+        await page.waitForNetworkIdle({ idleTime: 500 });
+        await page.click(editTimeShit)
+    } catch {
+        console.log("error")
 
-    await page.waitForSelector(editTimeShit);
-    await page.waitForNetworkIdle({ idleTime: 500 });
-    await page.click(editTimeShit)
-
+    }
 }
 
 async function is_already_connected(page) {
@@ -114,11 +124,11 @@ async function fill_today(page, hours, description) {
     const startTime = "#__field117"
     const endTime = "#__field119"
     const release = "#__button33"
-    const all = "#__item191"
+    const all = "#__item191" //missing
     await page.waitForNetworkIdle({ idleTime: 500 });
-    await page.waitForSelector(billableHours);
+    await page.waitForSelector(billableHours || "#__field99");
 
-    await page.click(billableHours);
+    await page.click(billableHours || "#__field99");
     await page.keyboard.type((hours.total).toString(), { delay: 20 })
 
     await page.click(startTime);
@@ -129,12 +139,11 @@ async function fill_today(page, hours, description) {
     await page.click(workDescription);
     await page.type(workDescription, description, { delay: 20 })
 
-
-    //
     await page.waitForNetworkIdle({ idleTime: 500 });
     await page.click(release);
     await page.waitForSelector(all);
     await page.click(all);
+    await page.waitForNetworkIdle({ idleTime: 500 });
 }
 
 async function getDayOfWeekSelector() {
